@@ -30,16 +30,31 @@ jobs:
       - name: Set up R
         uses: r-lib/actions/setup-r@v2
         with:
-          r-version: '4.4.1'         # or 'release'
+          r-version: '4.4.1'
           use-public-rspm: true
 
-      - name: Install deps (fast)
+      - name: Install Linux system dependencies
         run: |
-          Rscript -e 'install.packages(c("shiny","rsconnect","jsonlite","shinydashboard"), repos="https://cloud.r-project.org")'
+          sudo apt-get update
+          sudo apt-get install -y \
+            libcurl4-openssl-dev libssl-dev libxml2-dev libgit2-dev zlib1g-dev
+
+      - name: Install R package dependencies (with fallback)
+        run: |
+          Rscript -e 'repos <- c(POSIT="https://packagemanager.posit.co/cran/latest", CRAN="https://cloud.r-project.org"); \
+                      install.packages(c("shiny","jsonlite","shinydashboard","openssl","curl"), repos=repos); \
+                      ok <- TRUE; \
+                      tryCatch(install.packages("rsconnect", repos=repos), error=function(e){ ok <<- FALSE; message("Latest rsconnect install failed: ", e$message) }); \
+                      if (!ok) { if (!requireNamespace("remotes", quietly=TRUE)) install.packages("remotes", repos=repos); \
+                                 remotes::install_version("rsconnect", version="1.2.1", repos=repos) }'
+
+      - name: Diagnostics
+        run: |
+          Rscript -e 'cat("LibPaths:", paste(.libPaths(), collapse=" | "), "\n"); ip <- rownames(installed.packages()); cat("Has rsconnect? ", "rsconnect" %in% ip, "\n"); packageVersion("rsconnect"); sessionInfo()'
 
       - name: Preflight
         run: |
-          Rscript -e 'source("global.R"); source("utils.R"); cat("OK\n")'
+          Rscript -e 'stopifnot(file.exists("global.R")); source("global.R"); cat("Preflight OK. COMMIT_SHA=", Sys.getenv("GIT_SHA",""), "\n")'
 
       - name: Deploy to shinyapps.io
         env:
@@ -48,5 +63,6 @@ jobs:
           SHINY_SECRET: ${{ secrets.SHINY_SECRET }}
           SHINY_APPNAME: ${{ secrets.SHINY_APPNAME }}
         run: |
+          Rscript -e 'if (!requireNamespace("rsconnect", quietly = TRUE)) install.packages("rsconnect", repos="https://cloud.r-project.org")'
           Rscript -e 'rsconnect::setAccountInfo(name=Sys.getenv("SHINY_NAME"), token=Sys.getenv("SHINY_TOKEN"), secret=Sys.getenv("SHINY_SECRET"))'
           Rscript -e 'rsconnect::deployApp(appDir=".", appName=Sys.getenv("SHINY_APPNAME"), forceUpdate=TRUE)'
