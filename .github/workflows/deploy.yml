@@ -41,12 +41,22 @@ jobs:
 
       - name: Install R package dependencies (with fallback)
         run: |
-          Rscript -e 'repos <- c(POSIT="https://packagemanager.posit.co/cran/latest", CRAN="https://cloud.r-project.org"); \
-                      install.packages(c("shiny","jsonlite","shinydashboard","openssl","curl"), repos=repos); \
-                      ok <- TRUE; \
-                      tryCatch(install.packages("rsconnect", repos=repos), error=function(e){ ok <<- FALSE; message("Latest rsconnect install failed: ", e$message) }); \
-                      if (!ok) { if (!requireNamespace("remotes", quietly=TRUE)) install.packages("remotes", repos=repos); \
-                                 remotes::install_version("rsconnect", version="1.2.1", repos=repos) }'
+          Rscript -e '
+            repos <- c(POSIT = "https://packagemanager.posit.co/cran/latest", CRAN = "https://cloud.r-project.org")
+            install.packages(c("shiny", "jsonlite", "shinydashboard", "openssl", "curl"), repos = repos)
+            ok <- TRUE
+            tryCatch(
+              install.packages("rsconnect", repos = repos),
+              error = function(e) {
+                ok <<- FALSE
+                message("Latest rsconnect install failed: ", e$message)
+              }
+            )
+            if (!ok) {
+              if (!requireNamespace("remotes", quietly = TRUE)) install.packages("remotes", repos = repos)
+              remotes::install_version("rsconnect", version = "1.2.1", repos = repos)
+            }
+          '
 
       - name: Diagnostics
         run: |
