@@ -1,6 +1,11 @@
 # minimal shiny app with a footer showing GIT_SHA and DEPLOY_TIME from env
 library(shiny)
 
+if (file.exists("global.R")) source("global.R")
+# if (!exists("COMMIT_SHA", inherits = TRUE)) COMMIT_SHA <- substr(Sys.getenv("GIT_SHA", "dev-local"), 1, 7)
+# if (!exists("DEPLOY_TIME_UTC", inherits = TRUE)) DEPLOY_TIME_UTC <- Sys.getenv("DEPLOY_TIME", "")
+
+
 ui <- fluidPage(
   tags$head(tags$style(HTML("\n    .footer { margin-top: 30px; font-size: 12px; opacity: .75; }\n+  "))),
   h2("ClinViewer Mini Test"),
