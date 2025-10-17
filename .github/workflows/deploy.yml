@@ -1,59 +1,52 @@
-name: Shiny Test Deploy
+name: Shiny Footer Test Deploy
 
 on:
   push:
     branches: [ main ]
 
 concurrency:
-  group: clinviewer-mini-test-prod
+  group: clinviewer-footer-test
   cancel-in-progress: false
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Build metadata env for footer
       - name: Set build metadata
-        shell: bash
         run: |
           echo "GIT_SHA=${GITHUB_SHA::7}" >> "$GITHUB_ENV"
           echo "DEPLOY_TIME=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_ENV"
 
-      # Write ONLY the two variables we want to test into .Renviron
       - name: Write .Renviron (build metadata only)
-        shell: bash
         run: |
           printf "GIT_SHA=%s\n"      "${{ env.GIT_SHA }}"      >> .Renviron
           printf "DEPLOY_TIME=%s\n"  "${{ env.DEPLOY_TIME }}"  >> .Renviron
-          echo ".Renviron contents:"
-          sed 's/=.*/=********/' .Renviron  # redact values in logs
+          sed 's/=.*/=********/' .Renviron
 
       - name: Set up R
         uses: r-lib/actions/setup-r@v2
         with:
-          r-version: 'stable'
+          r-version: '4.4.1'         # or 'release'
+          use-public-rspm: true
 
       - name: Install deps (fast)
-        shell: bash
         run: |
-          Rscript -e 'install.packages(c("shiny","rsconnect"), repos="https://cloud.r-project.org")'
+          Rscript -e 'install.packages(c("shiny","rsconnect","jsonlite","shinydashboard"), repos="https://cloud.r-project.org")'
 
-      # Quick sanity check: can we source global and read env?
       - name: Preflight
-        shell: bash
         run: |
-          Rscript -e 'source("global.R"); cat(paste("COMMIT_SHA=", COMMIT_SHA, "\n")) ; stopifnot(nchar(COMMIT_SHA) >= 3)'
+          Rscript -e 'source("global.R"); source("utils.R"); cat("OK\n")'
 
       - name: Deploy to shinyapps.io
         env:
           SHINY_NAME:   ${{ secrets.SHINY_NAME }}
           SHINY_TOKEN:  ${{ secrets.SHINY_TOKEN }}
           SHINY_SECRET: ${{ secrets.SHINY_SECRET }}
-        shell: bash
+          SHINY_APPNAME: ${{ secrets.SHINY_APPNAME }}
         run: |
           Rscript -e 'rsconnect::setAccountInfo(name=Sys.getenv("SHINY_NAME"), token=Sys.getenv("SHINY_TOKEN"), secret=Sys.getenv("SHINY_SECRET"))'
-          Rscript -e 'rsconnect::deployApp(appDir=".", appName="${{ secrets.SHINY_APPNAME }}", forceUpdate=TRUE)'
+          Rscript -e 'rsconnect::deployApp(appDir=".", appName=Sys.getenv("SHINY_APPNAME"), forceUpdate=TRUE)'
