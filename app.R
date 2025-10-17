@@ -2,9 +2,7 @@
 library(shiny)
 
 ui <- fluidPage(
-  tags$head(tags$style(HTML("
-    .footer { margin-top: 30px; font-size: 12px; opacity: .75; }
-  "))),
+  tags$head(tags$style(HTML("\n    .footer { margin-top: 30px; font-size: 12px; opacity: .75; }\n+  "))),
   h2("ClinViewer Mini Test"),
   p("If you can see commit + deploy time below, the CI → .Renviron → footer path works."),
   div(class = "footer",
